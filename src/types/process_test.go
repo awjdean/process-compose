@@ -132,6 +132,48 @@ func TestCompareProcessConfigs(t *testing.T) {
 	}
 }
 
+func TestProcessStateLogReadiness(t *testing.T) {
+	tests := []struct {
+		name    string
+		health  string
+		isReady bool
+		reason  string
+	}{
+		{
+			name:   "waiting for ready log",
+			health: ProcessHealthUnknown,
+			reason: "health is Unknown",
+		},
+		{
+			name:    "ready log observed",
+			health:  ProcessHealthReady,
+			isReady: true,
+		},
+		{
+			name:   "not ready",
+			health: ProcessHealthNotReady,
+			reason: "health is Not Ready",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			state := NewProcessState(&ProcessConfig{ReadyLogLine: "READY"})
+			state.Status = ProcessStateRunning
+			state.IsRunning = true
+			state.Health = tt.health
+
+			if ready, reason := state.IsReadyReason(); ready != tt.isReady || reason != tt.reason {
+				t.Errorf("IsReadyReason() = (%v, %q), want (%v, %q)", ready, reason, tt.isReady, tt.reason)
+			}
+			project := ProcessesState{States: []ProcessState{*state}}
+			if ready := project.IsReady(); ready != tt.isReady {
+				t.Errorf("project.IsReady() = %v, want %v", ready, tt.isReady)
+			}
+		})
+	}
+}
+
 func TestProcessStateIsReady(t *testing.T) {
 	tests := []struct {
 		name    string
