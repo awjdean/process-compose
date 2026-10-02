@@ -424,7 +424,7 @@ func (p *ProcessState) IsReadyReason() (bool, string) {
 		return false, fmt.Sprintf("health is %s", health)
 	} else if p.Health != ProcessHealthReady && p.Health != ProcessHealthUnknown {
 		return false, fmt.Sprintf("health is %s", p.Health)
-	} else if !p.IsExitCodeSuccess() {
+	} else if !p.IsRunning && !p.IsExitCodeSuccess() {
 		return false, fmt.Sprintf("failed with exit code %d", p.ExitCode)
 	}
 	return true, ""
