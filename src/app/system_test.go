@@ -1099,6 +1099,55 @@ func TestSystem_TestReadyLineWithSkipped(t *testing.T) {
 
 }
 
+// TestSystem_TestReadyLineProjectReadiness makes sure that a running process
+// with a `ready_log_line` keeps the project not ready until the line is printed.
+func TestSystem_TestReadyLineProjectReadiness(t *testing.T) {
+	proc1 := "proc1"
+	shell := command.DefaultShellConfig()
+	project := &types.Project{
+		Processes: map[string]types.ProcessConfig{
+			proc1: {
+				Name:         proc1,
+				ReplicaName:  proc1,
+				Executable:   shell.ShellCommand,
+				Args:         []string{shell.ShellArgument, getSleepCommand(1.0) + " && echo ready && " + getSleepCommand(2.0)},
+				ReadyLogLine: "ready",
+			},
+		},
+		ShellConfig: shell,
+	}
+	runner, err := NewProjectRunner(&ProjectOpts{
+		project: project,
+	})
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	runErr := make(chan error, 1)
+	go func() {
+		runErr <- runner.Run()
+	}()
+	defer func() {
+		_ = runner.ShutDownProject()
+		<-runErr
+	}()
+	isProjectReady := func() bool {
+		states, err := runner.GetProcessesState()
+		if err != nil {
+			t.Fatal(err.Error())
+		}
+		return states.IsReady()
+	}
+
+	waitForProcessState(t, runner, proc1, types.ProcessStateRunning, 5*time.Second)
+	if isProjectReady() {
+		t.Fatal("project is ready before the ready log line was printed")
+	}
+
+	if !waitFor(10*time.Second, isProjectReady) {
+		t.Fatal("project is not ready after the ready log line was printed")
+	}
+}
+
 func TestUpdateProject(t *testing.T) {
 	proc1 := "process1"
 	proc2 := "process2"

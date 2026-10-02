@@ -157,6 +157,8 @@ processes:
 
 > :bulb: `ready_log_line` and readiness probe are incompatible and can't be used at the same time.
 
+> :bulb: A process with a `ready_log_line` is not considered ready (e.g. by `process-compose project is-ready` or `--detach-on-success`) until the line is printed.
+
 ## Run only specific processes
 
 For testing and debugging purposes, especially when your `process-compose.yaml` file contains many processes, you might want to specify only a subset of processes to run. For example:
